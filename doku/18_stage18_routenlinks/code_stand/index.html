@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reisebot</title>
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --flaeche: #ffffff;
+    --rand: #e2ddd4;
+    --text: #2b2924;
+    --text-schwach: #756f63;
+    --akzent: #2f6f4f;
+    --akzent-hell: #eaf3ee;
+    --bot-blase: #eeece6;
+    --nutzer-blase: var(--akzent);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  main {
+    width: 100%;
+    max-width: 760px;
+    padding: 24px 16px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  header h1 {
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+  }
+  header p {
+    margin: 0;
+    color: var(--text-schwach);
+    font-size: 0.9rem;
+  }
+  #chat {
+    background: var(--flaeche);
+    border: 1px solid var(--rand);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #verlauf {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 55vh;
+    overflow-y: auto;
+  }
+  .nachricht {
+    max-width: 80%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    font-size: 0.95rem;
+  }
+  .nachricht.bot {
+    background: var(--bot-blase);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+  .nachricht.nutzer {
+    background: var(--nutzer-blase);
+    color: #fff;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .nachricht.system {
+    align-self: center;
+    color: var(--text-schwach);
+    font-size: 0.85rem;
+    font-style: italic;
+  }
+  .hotel-karte-wrapper {
+    padding: 0;
+    background: transparent;
+    width: 220px;
+    max-width: 220px;
+  }
+  .hotel-karte-wrapper .karte { border-radius: 14px; border-bottom-left-radius: 4px; }
+  form#eingabeform {
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    border-top: 1px solid var(--rand);
+  }
+  #eingabe {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--rand);
+    border-radius: 8px;
+    font-size: 0.95rem;
+  }
+  button {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    background: var(--akzent);
+    color: #fff;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: default; }
+  #mikrofon, #vorlesen {
+    background: var(--bot-blase);
+    color: var(--text);
+    padding: 10px 14px;
+    flex-shrink: 0;
+  }
+  #mikrofon.aktiv { background: #d64545; color: #fff; }
+  #vorlesen.aktiv { background: var(--akzent); color: #fff; }
+
+  #ergebnis { display: none; flex-direction: column; gap: 18px; }
+  #ergebnis h2 { margin: 0; font-size: 1.2rem; }
+  .nudge {
+    background: var(--akzent-hell);
+    border: 1px solid var(--akzent);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+  }
+  .kartenreihe {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .karte {
+    background: var(--flaeche);
+    border: 1px solid var(--rand);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .karte img {
+    width: 100%;
+    height: 130px;
+    object-fit: cover;
+    display: block;
+    background: var(--bot-blase);
+  }
+  .karte .karte-inhalt {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .karte .karte-inhalt strong { font-size: 0.95rem; }
+  .karte .karte-inhalt span { font-size: 0.82rem; color: var(--text-schwach); }
+  .karte .karte-inhalt a { font-size: 0.82rem; color: var(--akzent); text-decoration: none; }
+  .karte .karte-inhalt a:hover { text-decoration: underline; }
+  .tag-titel { font-weight: 600; margin: 8px 0 -4px; }
+  details#volltext {
+    background: var(--flaeche);
+    border: 1px solid var(--rand);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  details#volltext pre { white-space: pre-wrap; font-family: inherit; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Reisebot</h1>
+    <p>Reiseplanungs-Prototyp (Masterarbeit) – erzähl mir, was dir für eine Reise vorschwebt.</p>
+  </header>
+
+  <section id="chat">
+    <div id="verlauf"></div>
+    <form id="eingabeform">
+      <input id="eingabe" type="text" autocomplete="off" placeholder="Antwort eingeben oder sprechen ..." />
+      <button type="button" id="mikrofon" title="Sprechen (Mikrofon des Geräts)">🎤</button>
+      <button type="button" id="vorlesen" title="Antworten des Bots vorlesen (Lautsprecher des Geräts)">🔊</button>
+      <button type="submit" id="senden">Senden</button>
+    </form>
+  </section>
+
+  <section id="ergebnis">
+    <h2>Dein Reiseplan</h2>
+    <div id="nudge" class="nudge" style="display:none"></div>
+    <div id="unterkunft-bereich"></div>
+    <div id="tage-bereich"></div>
+    <div id="weitere-bereich"></div>
+    <details id="volltext">
+      <summary>Vollständiger Reiseplan als Text</summary>
+      <pre id="volltext-inhalt"></pre>
+    </details>
+  </section>
+</main>
+
+<script>
+const verlauf = document.getElementById("verlauf");
+const form = document.getElementById("eingabeform");
+const eingabe = document.getElementById("eingabe");
+const sendenKnopf = document.getElementById("senden");
+const mikrofonKnopf = document.getElementById("mikrofon");
+const vorlesenKnopf = document.getElementById("vorlesen");
+
+function anhaengen(text, klasse) {
+  const el = document.createElement("div");
+  el.className = "nachricht " + klasse;
+  el.textContent = text;
+  verlauf.appendChild(el);
+  verlauf.scrollTop = verlauf.scrollHeight;
+}
+
+const protokoll = location.protocol === "https:" ? "wss:" : "ws:";
+const socket = new WebSocket(protokoll + "//" + location.host + "/ws/chat");
+
+socket.addEventListener("open", () => {
+  anhaengen("Verbunden – warte auf die erste Frage ...", "system");
+});
+
+socket.addEventListener("close", () => {
+  eingabe.disabled = true;
+  sendenKnopf.disabled = true;
+  mikrofonKnopf.disabled = true;
+});
+
+socket.addEventListener("error", () => {
+  anhaengen("Verbindungsfehler.", "system");
+});
+
+socket.addEventListener("message", (ereignis) => {
+  const daten = JSON.parse(ereignis.data);
+  if (daten.typ === "bot") {
+    anhaengen(daten.text, "bot");
+    liesVor(daten.text);
+  } else if (daten.typ === "hotel_karte") {
+    zeigeHotelKarteImVerlauf(daten);
+  } else if (daten.typ === "ergebnis") {
+    zeigeErgebnis(daten);
+    eingabe.disabled = true;
+    sendenKnopf.disabled = true;
+    mikrofonKnopf.disabled = true;
+  }
+});
+
+function sendeNachricht(text) {
+  const bereinigt = text.trim();
+  if (!bereinigt) return;
+  anhaengen(bereinigt, "nutzer");
+  socket.send(JSON.stringify({ text: bereinigt }));
+  eingabe.value = "";
+}
+
+form.addEventListener("submit", (ereignis) => {
+  ereignis.preventDefault();
+  sendeNachricht(eingabe.value);
+});
+
+// Mikrofon (Spracheingabe) + Vorlesefunktion (Sprachausgabe) – Standardmikrofon/-lautsprecher des
+// Nutzergeräts über die Web Speech API des Browsers, KEINE Serverbeteiligung (anders als
+// AUDIO_MODUS in chat.py, das auf ein Mikrofon/Lautsprecher am SERVER angewiesen wäre – nutzlos
+// für einen entfernten Browser-Client). Der Chat läuft danach unverändert genauso weiter, eine
+// erkannte Äußerung wird wie eine getippte Nachricht verschickt.
+const SpracherkennungKlasse = window.SpeechRecognition || window.webkitSpeechRecognition;
+let vorlesenAktiv = false;
+
+function aktualisiereVorlesenKnopf() {
+  vorlesenKnopf.classList.toggle("aktiv", vorlesenAktiv);
+}
+
+vorlesenKnopf.addEventListener("click", () => {
+  vorlesenAktiv = !vorlesenAktiv;
+  aktualisiereVorlesenKnopf();
+  if (!vorlesenAktiv && "speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+});
+
+// Deutsche Stimmen des Browsers/Betriebssystems für die Vorlesefunktion – `getVoices()` liefert
+// beim allerersten Aufruf oft noch eine leere Liste (Stimmen werden asynchron nachgeladen), daher
+// zusätzlich auf das "voiceschanged"-Ereignis hören und die Liste dann aktualisieren.
+let deutscheStimmen = [];
+
+function aktualisiereStimmenListe() {
+  deutscheStimmen = window.speechSynthesis.getVoices().filter((stimme) => stimme.lang?.toLowerCase().startsWith("de"));
+}
+
+if ("speechSynthesis" in window) {
+  aktualisiereStimmenListe();
+  window.speechSynthesis.onvoiceschanged = aktualisiereStimmenListe;
+}
+
+function waehleNatuerlicheStimme() {
+  if (!deutscheStimmen.length) return null;
+  // Netzwerk-/Cloud-Stimmen (z.B. "Google Deutsch") klingen deutlich natürlicher als die
+  // vorinstallierten lokalen System-Stimmen ("Microsoft Hedda" u.ä.) – wo verfügbar, bevorzugen.
+  return (
+    deutscheStimmen.find((stimme) => /google/i.test(stimme.name))
+    || deutscheStimmen.find((stimme) => !stimme.localService)
+    || deutscheStimmen[0]
+  );
+}
+
+function liesVor(text) {
+  if (!vorlesenAktiv || !("speechSynthesis" in window)) return;
+  const aeusserung = new SpeechSynthesisUtterance(text);
+  aeusserung.lang = "de-DE";
+  const stimme = waehleNatuerlicheStimme();
+  if (stimme) aeusserung.voice = stimme;
+  window.speechSynthesis.speak(aeusserung);
+}
+
+if (!SpracherkennungKlasse) {
+  // z.B. Firefox ohne Spracherkennungs-Unterstützung – Chat bleibt per Text/Vorlesen nutzbar.
+  mikrofonKnopf.disabled = true;
+  mikrofonKnopf.title = "Spracheingabe wird von diesem Browser nicht unterstützt (z.B. Firefox) – bitte Chrome/Edge/Safari verwenden oder weiter tippen.";
+} else {
+  const erkennung = new SpracherkennungKlasse();
+  erkennung.lang = "de-DE";
+  erkennung.continuous = false;
+  erkennung.interimResults = false;
+  let zuhoertGerade = false;
+
+  // BEHOBENER BUG: der Knopf wurde bisher SOFORT beim Klick rot markiert (optimistisch, noch bevor
+  // die Erkennung tatsächlich lief) und jeder weitere Klick rief erneut `start()` auf, obwohl eine
+  // Erkennung bereits lief – das wirft in allen Browsern einen synchronen `InvalidStateError`, den
+  // niemand sah, und `error`/`end` räumten den roten Zustand kommentarlos wieder ab ("leuchtet rot,
+  // hört sofort wieder auf, funktioniert nicht"). Jetzt: rot erst NACH dem echten "start"-Ereignis,
+  // ein zweiter Klick während des Zuhörens beendet die laufende Erkennung sauber (`stop()`) statt
+  // sie neu zu starten, und jeder Fehler bekommt eine sichtbare, erklärende Meldung im Chat.
+  erkennung.addEventListener("start", () => {
+    zuhoertGerade = true;
+    mikrofonKnopf.classList.add("aktiv");
+  });
+  erkennung.addEventListener("result", (ereignis) => {
+    const text = ereignis.results[0][0].transcript;
+    sendeNachricht(text);
+    // Erste Spracheingabe schaltet automatisch auch die Vorlesefunktion ein – wer mit dem Bot
+    // spricht, möchte vermutlich auch gesprochene Antworten hören (jederzeit wieder abschaltbar).
+    if (!vorlesenAktiv) {
+      vorlesenAktiv = true;
+      aktualisiereVorlesenKnopf();
+    }
+  });
+  erkennung.addEventListener("end", () => {
+    zuhoertGerade = false;
+    mikrofonKnopf.classList.remove("aktiv");
+  });
+  erkennung.addEventListener("error", (ereignis) => {
+    zuhoertGerade = false;
+    mikrofonKnopf.classList.remove("aktiv");
+    const meldung = mikrofonFehlermeldung(ereignis.error);
+    if (meldung) anhaengen(meldung, "system");
+  });
+
+  mikrofonKnopf.addEventListener("click", () => {
+    if (zuhoertGerade) {
+      erkennung.stop();
+      return;
+    }
+    try {
+      erkennung.start();
+    } catch (fehler) {
+      anhaengen("Spracherkennung konnte nicht gestartet werden – bitte kurz warten und erneut klicken.", "system");
+    }
+  });
+}
+
+function mikrofonFehlermeldung(code) {
+  switch (code) {
+    case "not-allowed":
+    case "permission-denied":
+      return "Mikrofonzugriff wurde verweigert – bitte in den Browser-/Systemeinstellungen für diese Seite erlauben und erneut klicken.";
+    case "audio-capture":
+      return "Kein Mikrofon gefunden – ist eins angeschlossen und als Standardgerät ausgewählt?";
+    case "no-speech":
+      return "Es wurde nichts gehört – bitte nach dem Klick direkt sprechen.";
+    case "network":
+      return (
+        "Der Spracherkennungsdienst des Browsers ist nicht erreichbar – NICHT zwingend fehlende " +
+        "Internetverbindung, oft eher ein Chromium-Browser ohne Google-API-Schlüssel (z.B. Brave, " +
+        "Opera) oder ein Adblocker/eine Firewall, die den Dienst blockiert. Mit Google Chrome/Edge " +
+        "prüfen, oder einfach normal tippen bzw. ein externes Diktier-Tool wie Whisper Flow " +
+        "verwenden, das direkt ins Textfeld schreibt."
+      );
+    case "aborted":
+      return null; // Nutzer hat selbst per Klick abgebrochen, keine Fehlermeldung nötig
+    default:
+      return `Spracherkennung fehlgeschlagen (${code}).`;
+  }
+}
+
+function karteHtml(karte, kategorieText) {
+  const bild = karte.foto_url
+    ? `<img src="${karte.foto_url}" alt="${escapeHtml(karte.name)}">`
+    : `<div style="height:130px;display:flex;align-items:center;justify-content:center;color:#999;font-size:0.8rem;background:var(--bot-blase);">Kein Foto verfügbar</div>`;
+  const link = karte.maps_link
+    ? `<a href="${karte.maps_link}" target="_blank" rel="noopener">Auf Google Maps ansehen</a>`
+    : "";
+  return `<div class="karte">
+    ${bild}
+    <div class="karte-inhalt">
+      <strong>${escapeHtml(karte.name)}</strong>
+      ${kategorieText ? `<span>${escapeHtml(kategorieText)}</span>` : ""}
+      ${link}
+    </div>
+  </div>`;
+}
+
+function zeigeHotelKarteImVerlauf(daten) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "nachricht bot hotel-karte-wrapper";
+  const preisText = daten.preis_pro_nacht_euro != null
+    ? `ca. ${Math.round(daten.preis_pro_nacht_euro)} € / Nacht (grobe Schätzung)`
+    : "";
+  wrapper.innerHTML = karteHtml(daten, preisText);
+  verlauf.appendChild(wrapper);
+  verlauf.scrollTop = verlauf.scrollHeight;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text ?? "";
+  return div.innerHTML;
+}
+
+function zeigeErgebnis(daten) {
+  document.getElementById("ergebnis").style.display = "flex";
+
+  if (daten.nachhaltigkeits_nudge) {
+    const nudge = document.getElementById("nudge");
+    nudge.style.display = "block";
+    nudge.textContent = daten.nachhaltigkeits_nudge;
+  }
+
+  const karten = daten.karten || {};
+
+  const unterkunftBereich = document.getElementById("unterkunft-bereich");
+  if (karten.unterkunft) {
+    unterkunftBereich.innerHTML =
+      `<div class="tag-titel">Unterkunft</div><div class="kartenreihe">${karteHtml(karten.unterkunft, "")}</div>`;
+  }
+
+  const tageBereich = document.getElementById("tage-bereich");
+  tageBereich.innerHTML = (karten.tage || []).map((tag) => {
+    const titel = "Tag " + tag.tag + (tag.ankunftstag ? " (Ankunft)" : "");
+    const karten_html = tag.besuche.map((b) => {
+      const anfahrt = b.verkehrsmittel ? `Anfahrt ${b.verkehrsmittel} · ` : "";
+      return karteHtml(b, `${anfahrt}${b.kategorie} · ${b.ankunft} – ${b.abfahrt}`);
+    }).join("");
+    return `<div class="tag-titel">${titel}</div><div class="kartenreihe">${karten_html || "<p>Kein Programm eingeplant.</p>"}</div>`;
+  }).join("");
+
+  const weitereBereich = document.getElementById("weitere-bereich");
+  if (karten.weitere_empfehlungen && karten.weitere_empfehlungen.length) {
+    const karten_html = karten.weitere_empfehlungen.map((p) => karteHtml(p, p.kategorie)).join("");
+    weitereBereich.innerHTML = `<div class="tag-titel">Weitere Empfehlungen</div><div class="kartenreihe">${karten_html}</div>`;
+  }
+
+  document.getElementById("volltext-inhalt").textContent = daten.text +
+    (daten.meldungen && daten.meldungen.length ? "\n\n" + daten.meldungen.join("\n") : "");
+}
+</script>
+</body>
+</html>

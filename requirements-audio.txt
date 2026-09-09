@@ -1,0 +1,12 @@
+# Optionale Abhängigkeiten für den Sprachmodus (AUDIO_MODUS=true, siehe .env.example).
+# Installation: pip install -r requirements-audio.txt
+# Getrennt von requirements.txt, weil openai-whisper PyTorch mitzieht (groß,
+# ~2 GB) und nur gebraucht wird, wer den Bot wirklich per Sprache nutzen will.
+#
+# Hinweis: faster-whisper wurde bewusst NICHT verwendet, weil dessen
+# Abhängigkeit `av` (PyAV) auf diesem Rechner an einer Windows-
+# Anwendungssteuerungsrichtlinie scheiterte (DLL-Ladefehler). openai-whisper
+# kommt ohne PyAV aus und funktioniert stattdessen.
+openai-whisper
+pyttsx3
+sounddevice

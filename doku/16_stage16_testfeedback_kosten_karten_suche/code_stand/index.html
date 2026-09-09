@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reisebot</title>
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --flaeche: #ffffff;
+    --rand: #e2ddd4;
+    --text: #2b2924;
+    --text-schwach: #756f63;
+    --akzent: #2f6f4f;
+    --akzent-hell: #eaf3ee;
+    --bot-blase: #eeece6;
+    --nutzer-blase: var(--akzent);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  main {
+    width: 100%;
+    max-width: 760px;
+    padding: 24px 16px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  header h1 {
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+  }
+  header p {
+    margin: 0;
+    color: var(--text-schwach);
+    font-size: 0.9rem;
+  }
+  #chat {
+    background: var(--flaeche);
+    border: 1px solid var(--rand);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #verlauf {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 55vh;
+    overflow-y: auto;
+  }
+  .nachricht {
+    max-width: 80%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    font-size: 0.95rem;
+  }
+  .nachricht.bot {
+    background: var(--bot-blase);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+  .nachricht.nutzer {
+    background: var(--nutzer-blase);
+    color: #fff;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .nachricht.system {
+    align-self: center;
+    color: var(--text-schwach);
+    font-size: 0.85rem;
+    font-style: italic;
+  }
+  form#eingabeform {
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    border-top: 1px solid var(--rand);
+  }
+  #eingabe {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--rand);
+    border-radius: 8px;
+    font-size: 0.95rem;
+  }
+  button {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    background: var(--akzent);
+    color: #fff;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: default; }
+
+  #ergebnis { display: none; flex-direction: column; gap: 18px; }
+  #ergebnis h2 { margin: 0; font-size: 1.2rem; }
+  .nudge {
+    background: var(--akzent-hell);
+    border: 1px solid var(--akzent);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+  }
+  .kartenreihe {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .karte {
+    background: var(--flaeche);
+    border: 1px solid var(--rand);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .karte img {
+    width: 100%;
+    height: 130px;
+    object-fit: cover;
+    display: block;
+    background: var(--bot-blase);
+  }
+  .karte .karte-inhalt {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .karte .karte-inhalt strong { font-size: 0.95rem; }
+  .karte .karte-inhalt span { font-size: 0.82rem; color: var(--text-schwach); }
+  .karte .karte-inhalt a { font-size: 0.82rem; color: var(--akzent); text-decoration: none; }
+  .karte .karte-inhalt a:hover { text-decoration: underline; }
+  .tag-titel { font-weight: 600; margin: 8px 0 -4px; }
+  details#volltext {
+    background: var(--flaeche);
+    border: 1px solid var(--rand);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  details#volltext pre { white-space: pre-wrap; font-family: inherit; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Reisebot</h1>
+    <p>Reiseplanungs-Prototyp (Masterarbeit) – erzähl mir, was dir für eine Reise vorschwebt.</p>
+  </header>
+
+  <section id="chat">
+    <div id="verlauf"></div>
+    <form id="eingabeform">
+      <input id="eingabe" type="text" autocomplete="off" placeholder="Antwort eingeben ..." />
+      <button type="submit" id="senden">Senden</button>
+    </form>
+  </section>
+
+  <section id="ergebnis">
+    <h2>Dein Reiseplan</h2>
+    <div id="nudge" class="nudge" style="display:none"></div>
+    <div id="unterkunft-bereich"></div>
+    <div id="tage-bereich"></div>
+    <div id="weitere-bereich"></div>
+    <details id="volltext">
+      <summary>Vollständiger Reiseplan als Text</summary>
+      <pre id="volltext-inhalt"></pre>
+    </details>
+  </section>
+</main>
+
+<script>
+const verlauf = document.getElementById("verlauf");
+const form = document.getElementById("eingabeform");
+const eingabe = document.getElementById("eingabe");
+const sendenKnopf = document.getElementById("senden");
+
+function anhaengen(text, klasse) {
+  const el = document.createElement("div");
+  el.className = "nachricht " + klasse;
+  el.textContent = text;
+  verlauf.appendChild(el);
+  verlauf.scrollTop = verlauf.scrollHeight;
+}
+
+const protokoll = location.protocol === "https:" ? "wss:" : "ws:";
+const socket = new WebSocket(protokoll + "//" + location.host + "/ws/chat");
+
+socket.addEventListener("open", () => {
+  anhaengen("Verbunden – warte auf die erste Frage ...", "system");
+});
+
+socket.addEventListener("close", () => {
+  eingabe.disabled = true;
+  sendenKnopf.disabled = true;
+});
+
+socket.addEventListener("error", () => {
+  anhaengen("Verbindungsfehler.", "system");
+});
+
+socket.addEventListener("message", (ereignis) => {
+  const daten = JSON.parse(ereignis.data);
+  if (daten.typ === "bot") {
+    anhaengen(daten.text, "bot");
+  } else if (daten.typ === "ergebnis") {
+    zeigeErgebnis(daten);
+    eingabe.disabled = true;
+    sendenKnopf.disabled = true;
+  }
+});
+
+form.addEventListener("submit", (ereignis) => {
+  ereignis.preventDefault();
+  const text = eingabe.value.trim();
+  if (!text) return;
+  anhaengen(text, "nutzer");
+  socket.send(JSON.stringify({ text }));
+  eingabe.value = "";
+});
+
+function karteHtml(karte, kategorieText) {
+  const bild = karte.foto_url
+    ? `<img src="${karte.foto_url}" alt="${escapeHtml(karte.name)}">`
+    : `<div style="height:130px;display:flex;align-items:center;justify-content:center;color:#999;font-size:0.8rem;background:var(--bot-blase);">Kein Foto verfügbar</div>`;
+  const link = karte.maps_link
+    ? `<a href="${karte.maps_link}" target="_blank" rel="noopener">Auf Google Maps ansehen</a>`
+    : "";
+  return `<div class="karte">
+    ${bild}
+    <div class="karte-inhalt">
+      <strong>${escapeHtml(karte.name)}</strong>
+      ${kategorieText ? `<span>${escapeHtml(kategorieText)}</span>` : ""}
+      ${link}
+    </div>
+  </div>`;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text ?? "";
+  return div.innerHTML;
+}
+
+function zeigeErgebnis(daten) {
+  document.getElementById("ergebnis").style.display = "flex";
+
+  if (daten.nachhaltigkeits_nudge) {
+    const nudge = document.getElementById("nudge");
+    nudge.style.display = "block";
+    nudge.textContent = daten.nachhaltigkeits_nudge;
+  }
+
+  const karten = daten.karten || {};
+
+  const unterkunftBereich = document.getElementById("unterkunft-bereich");
+  if (karten.unterkunft) {
+    unterkunftBereich.innerHTML =
+      `<div class="tag-titel">Unterkunft</div><div class="kartenreihe">${karteHtml(karten.unterkunft, "")}</div>`;
+  }
+
+  const tageBereich = document.getElementById("tage-bereich");
+  tageBereich.innerHTML = (karten.tage || []).map((tag) => {
+    const titel = "Tag " + tag.tag + (tag.ankunftstag ? " (Ankunft)" : "");
+    const karten_html = tag.besuche.map((b) =>
+      karteHtml(b, `${b.kategorie} · ${b.ankunft} – ${b.abfahrt}`)
+    ).join("");
+    return `<div class="tag-titel">${titel}</div><div class="kartenreihe">${karten_html || "<p>Kein Programm eingeplant.</p>"}</div>`;
+  }).join("");
+
+  const weitereBereich = document.getElementById("weitere-bereich");
+  if (karten.weitere_empfehlungen && karten.weitere_empfehlungen.length) {
+    const karten_html = karten.weitere_empfehlungen.map((p) => karteHtml(p, p.kategorie)).join("");
+    weitereBereich.innerHTML = `<div class="tag-titel">Weitere Empfehlungen</div><div class="kartenreihe">${karten_html}</div>`;
+  }
+
+  document.getElementById("volltext-inhalt").textContent = daten.text +
+    (daten.meldungen && daten.meldungen.length ? "\n\n" + daten.meldungen.join("\n") : "");
+}
+</script>
+</body>
+</html>

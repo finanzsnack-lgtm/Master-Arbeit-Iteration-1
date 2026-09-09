@@ -1,0 +1,15 @@
+{
+  "name": "Test",
+  "email": null,
+  "reisebegleitung": ["allein"],
+  "reiseleitung_gewuenscht": true,
+  "tour_tage_anzahl": 2,
+  "reisezeitraum_rohtext": "6 Tage",
+  "zielregionen": ["Hannover"],
+  "wohnort": "Hildesheim",
+  "budget_gesamt": 1500.0,
+  "verkehrsmittel_praeferenz": ["Bahn"],
+  "lokaler_transport_praeferenz": "Fahrrad und Bahn",
+  "unterkunft_anforderungen": "zentral gelegen, günstig",
+  "aktivitaeten_interessen": ["Museum", "Park", "Stadtführung", "Restaurants"]
+}

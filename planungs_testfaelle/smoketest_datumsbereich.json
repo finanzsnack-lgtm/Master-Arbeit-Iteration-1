@@ -1,0 +1,14 @@
+{
+  "name": "Test",
+  "email": null,
+  "reisebegleitung": ["allein"],
+  "reiseleitung_gewuenscht": false,
+  "reisezeitraum_rohtext": "vom 21.8. bis zum 4.9.",
+  "zielregionen": ["Hannover"],
+  "wohnort": "Hildesheim",
+  "budget_gesamt": 1500.0,
+  "verkehrsmittel_praeferenz": ["Bahn"],
+  "lokaler_transport_praeferenz": "Fahrrad und Bahn",
+  "unterkunft_anforderungen": "zentral gelegen, günstig",
+  "aktivitaeten_interessen": ["Museum", "Park"]
+}

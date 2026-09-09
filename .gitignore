@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+# Generierte Reiseplan-Ausgaben (Text/JSON/POI-CSV) – main.py/chat.py schreiben je Sitzung/Testfall
+# nach ergebnisse/, siehe src/fragekatalog/agent_tools.py `_ERGEBNISSE_VERZEICHNIS`.
+ergebnisse/
+
+# Prompt-Protokolle (src/protokoll.py) enthalten echte Nutzerantworten aus
+# Testläufen (Name, E-Mail, ggf. Gesundheitsangaben) -> personenbezogene
+# Daten, nicht einchecken.
+protokolle/
+
+# Lokale, maschinenspezifische Claude-Code-Berechtigungen – kein Code, kein
+# Projektinhalt, nicht relevant für andere Mitwirkende.
+.claude/settings.local.json

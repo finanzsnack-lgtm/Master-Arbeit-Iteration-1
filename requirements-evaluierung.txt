@@ -1,0 +1,4 @@
+# Zusätzliche Abhängigkeit NUR für evaluierung/ (unabhängige Prüfung von Optimierung 1 gegen ein
+# etabliertes, fremdes Optimierungs-Toolkit) – separat von requirements.txt, damit sie nicht für
+# den normalen Programmbetrieb installiert werden muss (analog zu requirements-audio.txt).
+ortools>=9.15
